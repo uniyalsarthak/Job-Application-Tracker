@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobTrack - Job Application Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{% if not logged_in %}
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-brand">
+            <div class="brand-icon">JT</div>
+            <div>
+                <h2>JobTrack</h2>
+                <span>Application Manager</span>
+            </div>
+        </div>
+
+        <div class="auth-heading">
+            <h1 id="authTitle">Welcome back</h1>
+            <p id="authSubtitle">Log in to manage your job applications.</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="loginTab">Login</button>
+            <button class="auth-tab" id="registerTab">Create account</button>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="loginEmail">Email</label>
+                <input id="loginEmail" type="email" required placeholder="you@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input id="loginPassword" type="password" required placeholder="Enter your password">
+            </div>
+
+            <button class="primary-btn auth-submit" type="submit">Login</button>
+        </form>
+
+        <form id="registerForm" class="hidden">
+            <div class="form-group">
+                <label for="registerName">Name</label>
+                <input id="registerName" required placeholder="Your name">
+            </div>
+
+            <div class="form-group">
+                <label for="registerEmail">Email</label>
+                <input id="registerEmail" type="email" required placeholder="you@example.com">
+            </div>
+
+            <div class="form-group">
+                <label for="registerPassword">Password</label>
+                <input id="registerPassword" type="password" minlength="6" required placeholder="At least 6 characters">
+            </div>
+
+            <button class="primary-btn auth-submit" type="submit">Create Account</button>
+        </form>
+
+        <p class="auth-message" id="authMessage"></p>
+    </div>
+</div>
+
+<script>
+const loginTab = document.getElementById("loginTab");
+const registerTab = document.getElementById("registerTab");
+const loginForm = document.getElementById("loginForm");
+const registerForm = document.getElementById("registerForm");
+const authTitle = document.getElementById("authTitle");
+const authSubtitle = document.getElementById("authSubtitle");
+const authMessage = document.getElementById("authMessage");
+
+function showLogin() {
+    loginTab.classList.add("active");
+    registerTab.classList.remove("active");
+    loginForm.classList.remove("hidden");
+    registerForm.classList.add("hidden");
+    authTitle.textContent = "Welcome back";
+    authSubtitle.textContent = "Log in to manage your job applications.";
+    authMessage.textContent = "";
+}
+
+function showRegister() {
+    registerTab.classList.add("active");
+    loginTab.classList.remove("active");
+    registerForm.classList.remove("hidden");
+    loginForm.classList.add("hidden");
+    authTitle.textContent = "Create your account";
+    authSubtitle.textContent = "Start tracking your job applications.";
+    authMessage.textContent = "";
+}
+
+loginTab.addEventListener("click", showLogin);
+registerTab.addEventListener("click", showRegister);
+
+loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            email: document.getElementById("loginEmail").value,
+            password: document.getElementById("loginPassword").value
+        })
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+        window.location.href = "/";
+    } else {
+        authMessage.textContent = result.error;
+    }
+});
+
+registerForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: document.getElementById("registerName").value,
+            email: document.getElementById("registerEmail").value,
+            password: document.getElementById("registerPassword").value
+        })
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+        window.location.href = "/";
+    } else {
+        authMessage.textContent = result.error;
+    }
+});
+</script>
+
+{% else %}
+
+<aside class="sidebar">
+    <div class="brand">
+        <div class="brand-icon">JT</div>
+        <div>
+            <h2>JobTrack</h2>
+            <span>Application Manager</span>
+        </div>
+    </div>
+
+    <nav>
+        <a class="nav-item active" href="#dashboard"><span>⌂</span> Dashboard</a>
+        <a class="nav-item" href="#applications"><span>▣</span> Applications</a>
+    </nav>
+
+    <div class="sidebar-bottom">
+        <div class="user-card">
+            <div class="user-avatar">{{ user_email[0]|upper }}</div>
+            <div class="user-info">
+                <strong>{{ user_email }}</strong>
+                <span>Signed in</span>
+            </div>
+        </div>
+        <button class="logout-btn" id="logoutBtn">↪ Log out</button>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <p class="eyebrow">APPLICATION TRACKER</p>
+            <h1>My Applications</h1>
+            <p class="subtitle">Track your job search from application to offer.</p>
+        </div>
+        <button class="primary-btn" id="openModalBtn">+ Add Application</button>
+    </header>
+
+    <section class="stats-grid" id="dashboard">
+        <div class="stat-card">
+            <div class="stat-top"><span>Total Applications</span><span class="stat-icon">▣</span></div>
+            <strong id="totalCount">0</strong>
+            <small>All applications</small>
+        </div>
+        <div class="stat-card">
+            <div class="stat-top"><span>In Progress</span><span class="stat-icon">◉</span></div>
+            <strong id="inProgressCount">0</strong>
+            <small>Currently in progress</small>
+        </div>
+        <div class="stat-card">
+            <div class="stat-top"><span>Selected</span><span class="stat-icon">✓</span></div>
+            <strong id="selectedCount">0</strong>
+            <small>Successful applications</small>
+        </div>
+        <div class="stat-card">
+            <div class="stat-top"><span>Rejected</span><span class="stat-icon">×</span></div>
+            <strong id="rejectedCount">0</strong>
+            <small>Closed applications</small>
+        </div>
+    </section>
+
+    <section class="content-grid">
+        <div class="panel applications-panel" id="applications">
+            <div class="panel-header">
+                <div>
+                    <h2>Applications</h2>
+                    <p>Manage your applications and their current status.</p>
+                </div>
+                <div class="controls">
+                    <input id="searchInput" type="search" placeholder="Search company...">
+                    <select id="statusFilter">
+                        <option value="All">All statuses</option>
+                        <option value="Applied">Applied</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Selected">Selected</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Role</th>
+                            <th>Applied On</th>
+                            <th>Status</th>
+                            <th>Notes</th>
+                            <th>Resume</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="applicationTable"></tbody>
+                </table>
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">▣</div>
+                    <h3>No applications found</h3>
+                    <p>Add your first application or change your filters.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel progress-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>Application Progress</h2>
+                    <p>Overview by status</p>
+                </div>
+            </div>
+            <div class="progress-list" id="progressList"></div>
+        </div>
+    </section>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <div>
+                <h2 id="modalTitle">Add Application</h2>
+                <p>Enter the details of the job application.</p>
+            </div>
+            <button class="close-btn" id="closeModalBtn">×</button>
+        </div>
+
+        <form id="applicationForm" enctype="multipart/form-data">
+            <input type="hidden" id="editId">
+            <input type="hidden" id="existingResumeName">
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="company">Company *</label>
+                    <input id="company" required placeholder="e.g. Google">
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Job Role *</label>
+                    <input id="role" required placeholder="e.g. Software Engineer">
+                </div>
+
+                <div class="form-group">
+                    <label for="applicationDate">Application Date *</label>
+                    <input id="applicationDate" type="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" required>
+                        <option value="Applied">Applied</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Selected">Selected</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+
+                <div class="form-group full">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" rows="3" placeholder="Optional notes..."></textarea>
+                </div>
+
+                <div class="form-group full">
+                    <label for="resume">Resume (PDF, DOC, or DOCX)</label>
+                    <input id="resume" type="file" accept=".pdf,.doc,.docx">
+                    <p class="current-resume" id="currentResumeInfo"></p>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="secondary-btn" id="cancelBtn">Cancel</button>
+                <button type="submit" class="primary-btn">Save Application</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+{% endif %}
+
+</body>
+</html>
